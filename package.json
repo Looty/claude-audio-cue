@@ -1,13 +1,14 @@
 {
   "name": "claude-audio-cue",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Plays an audio cue when Claude Desktop finishes streaming a response",
-  "main": "beep-on-claude-done.js",
+  "main": "monitor-uia.js",
   "scripts": {
-    "start": "node beep-on-claude-done.js",
-    "monitor": "node beep-on-claude-done.js"
+    "start": "node monitor-uia.js",
+    "monitor": "node monitor-uia.js",
+    "monitor-cdp": "node beep-on-claude-done.js"
   },
-  "keywords": ["claude", "desktop", "audio", "notification", "streaming"],
+  "keywords": ["claude", "desktop", "audio", "notification", "streaming", "windows", "ui-automation"],
   "license": "MIT",
   "dependencies": {
     "playwright": "^1.52.0"

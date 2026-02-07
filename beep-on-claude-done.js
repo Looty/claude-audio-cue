@@ -1,7 +1,9 @@
 const { chromium } = require('playwright');
 
-const CDP_URL = process.env.CDP_URL || 'http://localhost:9222';
+const CDP_URL = process.env.CDP_URL || 'http://127.0.0.1:9222';
 const POLL_INTERVAL_MS = 500;
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 2000;
 
 // Candidate selectors for Claude Desktop's streaming indicator.
 // After inspecting the DOM (chrome://inspect while Claude runs with --remote-debugging-port=9222),
@@ -38,18 +40,41 @@ async function isStreaming(page, knownSelector) {
   return (await findStreamingIndicator(page)) !== null;
 }
 
+async function connectWithRetry() {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[claude-audio-cue] Connection attempt ${attempt}/${MAX_RETRIES} to ${CDP_URL}...`);
+      const browser = await chromium.connectOverCDP(CDP_URL);
+      console.log('[claude-audio-cue] ✓ Successfully connected!');
+      return browser;
+    } catch (err) {
+      console.error(`[claude-audio-cue] ✗ Connection failed: ${err.message}`);
+
+      if (attempt < MAX_RETRIES) {
+        console.log(`[claude-audio-cue] Retrying in ${RETRY_DELAY_MS / 1000} seconds...\n`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      } else {
+        console.error(
+          `\n[claude-audio-cue] Could not connect after ${MAX_RETRIES} attempts.\n` +
+          `Make sure Claude Desktop is running with --remote-debugging-port=9222.\n\n` +
+          `Troubleshooting tips:\n` +
+          `1. Check if Claude.exe is actually running (Task Manager)\n` +
+          `2. Try closing Claude and running this script again\n` +
+          `3. Make sure no other process is using port 9222\n`
+        );
+        throw err;
+      }
+    }
+  }
+}
+
 async function monitorClaude() {
-  console.log(`[claude-audio-cue] Connecting to Claude Desktop via CDP at ${CDP_URL}...`);
+  console.log(`[claude-audio-cue] Starting monitor for Claude Desktop...`);
 
   let browser;
   try {
-    browser = await chromium.connectOverCDP(CDP_URL);
+    browser = await connectWithRetry();
   } catch (err) {
-    console.error(
-      `[claude-audio-cue] Could not connect to Claude Desktop.\n` +
-      `Make sure Claude is running with --remote-debugging-port=9222.\n` +
-      `Error: ${err.message}`
-    );
     process.exit(1);
   }
 
