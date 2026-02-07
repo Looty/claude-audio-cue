@@ -58,4 +58,4 @@ template: |
 
   $CHANGES
 
-  **Full Changelog**: https://github.com/$OWNER/$REPO/compare/$PREVIOUS_TAG...$RESOLVED_TAG
+  **Full Changelog**: https://github.com/Looty/claude-audio-cue/compare/$PREVIOUS_TAG...$RESOLVED_TAG
