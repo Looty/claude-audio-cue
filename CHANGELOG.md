@@ -1,6 +1,16 @@
 # Changelog
 
 
+## [1.0.2] - 2026-02-07
+
+## Changes in this Release
+
+* feat: enhance release workflow with version bumping and changelog upd… (#5) @Looty
+
+**Full Changelog**: https://github.com/Looty/claude-audio-cue/compare/v2026.2.10...
+
+
+
 ## [1.0.1] - 2026-02-07
 
 ## Changes in this Release
@@ -56,4 +66,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Legacy Node.js/npm requirements
 - PowerShell script execution dependency
+
 
