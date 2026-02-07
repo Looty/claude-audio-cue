@@ -23,7 +23,7 @@ jobs:
         run: dotnet restore ClaudeAudioCue.sln
 
       - name: Build
-        run: dotnet build ClaudeAudioCue.sln --configuration Release --no-restore /property:GenerateFullPaths=true
+        run: dotnet build ClaudeAudioCue.sln --configuration Release --no-restore -p:GenerateFullPaths=true
 
       - name: Run tests (if any)
         run: dotnet test ClaudeAudioCue.sln --configuration Release --no-build --verbosity normal
