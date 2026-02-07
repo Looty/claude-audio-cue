@@ -237,26 +237,9 @@ public partial class MainForm : Form
 
     private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
     {
-        if (_isExiting)
-        {
-            // Actually exit
-            _monitor?.Dispose();
-            trayIcon.Visible = false;
-            return;
-        }
-
-        if (e.CloseReason == CloseReason.UserClosing)
-        {
-            // Minimize to tray instead of closing
-            e.Cancel = true;
-            this.Hide();
-            trayIcon.Visible = true;
-            trayIcon.ShowBalloonTip(
-                2000,
-                "Claude Audio Cue",
-                "Still monitoring in the background. Right-click the tray icon to exit.",
-                ToolTipIcon.Info);
-        }
+        // Always close and exit the application
+        _monitor?.Dispose();
+        trayIcon.Visible = false;
     }
 
     private void MainForm_Resize(object? sender, EventArgs e)
