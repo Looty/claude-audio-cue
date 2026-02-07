@@ -99,10 +99,22 @@ jobs:
 
           # Find where to insert (after first two lines)
           $lines = $content -split "`n", 3
-          $changelogEntry = if ($body) { $body } else { "Release version $version" }
+          
+          if ($body) {
+            $changelogEntry = $body
+          } else {
+            $changelogEntry = "Release version $version"
+          }
+          
           $newEntry = "## [$version] - $date`n`n$changelogEntry`n"
 
-          $updatedContent = $lines[0] + "`n" + $lines[1] + "`n`n" + $newEntry + "`n" + (if ($lines.Length -gt 2) { $lines[2] } else { "" })
+          if ($lines.Length -gt 2) {
+            $additionalContent = $lines[2]
+          } else {
+            $additionalContent = ""
+          }
+          
+          $updatedContent = $lines[0] + "`n" + $lines[1] + "`n`n" + $newEntry + "`n" + $additionalContent
           Set-Content -Path $changelogPath -Value $updatedContent
 
       - name: Commit CHANGELOG
