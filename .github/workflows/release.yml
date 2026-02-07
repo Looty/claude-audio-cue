@@ -23,13 +23,13 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore dependencies
-        run: dotnet restore ClaudeAudioCue.sln
+        run: dotnet restore ClaudeAudioCue.sln --runtime win-x64
 
       - name: Build
-        run: dotnet build ClaudeAudioCue.sln --configuration Release --no-restore /property:GenerateFullPaths=true
+        run: dotnet build ClaudeAudioCue.sln --configuration Release --no-restore -p:GenerateFullPaths=true
 
       - name: Publish
-        run: dotnet publish ClaudeAudioCue.sln --configuration Release --no-build --self-contained /property:GenerateFullPaths=true
+        run: dotnet publish ClaudeAudioCue.sln --configuration Release --no-build --self-contained -p:GenerateFullPaths=true
 
       - name: Prepare artifacts
         shell: pwsh
