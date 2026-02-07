@@ -84,6 +84,32 @@ jobs:
           git commit -m "chore: update CHANGELOG for ${{ steps.draft_release.outputs.version }}" || echo "No changes to commit"
           git push origin HEAD:${{ github.ref }} || echo "Push failed or no remote"
 
+      - name: Create and Push Git Tag
+        if: success()
+        run: |
+          $tagName = "${{ steps.draft_release.outputs.tag_name }}"
+          $version = "${{ steps.draft_release.outputs.version }}"
+          
+          if (-not $tagName) {
+            Write-Host "Warning: tag_name not available from draft_release"
+            exit 0
+          }
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check if tag already exists
+          $tagExists = git tag -l "$tagName"
+          
+          if ($tagExists) {
+            Write-Host "Tag $tagName already exists, skipping tag creation"
+          } else {
+            Write-Host "Creating tag $tagName for version $version"
+            git tag -a "$tagName" -m "Release version $version"
+            git push origin "$tagName"
+          }
+        shell: pwsh
+
       - name: Create Release
         if: success()
         uses: softprops/action-gh-release@v2
