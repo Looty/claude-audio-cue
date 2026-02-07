@@ -29,7 +29,7 @@ jobs:
         run: dotnet build ClaudeAudioCue.sln --configuration Release --no-restore -p:GenerateFullPaths=true
 
       - name: Publish
-        run: dotnet publish ClaudeAudioCue.sln --configuration Release --no-build --self-contained -p:GenerateFullPaths=true
+        run: dotnet publish ClaudeAudioCue.sln --configuration Release --no-build --self-contained -r win-x64 -p:GenerateFullPaths=true
 
       - name: Prepare artifacts
         shell: pwsh
