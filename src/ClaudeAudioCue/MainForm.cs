@@ -7,6 +7,10 @@ public partial class MainForm : Form
     private ClaudeMonitor? _monitor;
     private bool _isExiting;
     private bool _hasBeenShown;
+    
+    // Cache for status icons
+    private readonly Dictionary<Color, Icon> _statusIconCache = new();
+    private Icon? _currentTrayIcon;
 
     // Color scheme for light/dark themes
     private static class Colors
@@ -143,23 +147,109 @@ public partial class MainForm : Form
         {
             case MonitorStatus.Idle:
                 UpdateStatus("Idle", Colors.StatusIdle);
+                UpdateTrayIcon(Colors.StatusIdle, "Claude Audio Cue — Idle");
                 break;
             case MonitorStatus.Searching:
                 UpdateStatus("Searching for Claude...", Colors.StatusSearching);
+                UpdateTrayIcon(Colors.StatusSearching, "Claude Audio Cue — Searching for Claude");
                 break;
             case MonitorStatus.Monitoring:
                 UpdateStatus("Monitoring", Colors.StatusMonitoring);
+                UpdateTrayIcon(Colors.StatusMonitoring, "Claude Audio Cue — Monitoring");
                 break;
             case MonitorStatus.StreamingDetected:
                 UpdateStatus("Claude is responding...", Colors.StatusStreaming);
+                UpdateTrayIcon(Colors.StatusStreaming, "Claude Audio Cue — Responding");
                 break;
             case MonitorStatus.StreamingEnded:
-                UpdateStatus("Response complete!", Colors.StatusMonitoring);
+                string durationText = FormatResponseTime(_monitor?.LastResponseDuration ?? TimeSpan.Zero);
+                UpdateStatus($"Response complete! ({durationText})", Colors.StatusMonitoring);
+                UpdateTrayIcon(Colors.StatusMonitoring, $"Claude Audio Cue — Response complete ({durationText})");
                 break;
             case MonitorStatus.Error:
                 UpdateStatus("Error — retrying...", Colors.StatusError);
+                UpdateTrayIcon(Colors.StatusError, "Claude Audio Cue — Error");
                 break;
         }
+    }
+
+    private string FormatResponseTime(TimeSpan duration)
+    {
+        if (duration.TotalSeconds < 1)
+            return "< 1s";
+        else if (duration.TotalSeconds < 60)
+            return $"{(int)duration.TotalSeconds}s";
+        else if (duration.TotalMinutes < 60)
+            return $"{(int)duration.TotalMinutes}m {(int)(duration.Seconds)}s";
+        else
+            return $"{(int)duration.TotalHours}h {(int)duration.Minutes}m {(int)duration.Seconds}s";
+    }
+
+    private void UpdateTrayIcon(Color statusColor, string tooltip)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => UpdateTrayIcon(statusColor, tooltip));
+            return;
+        }
+
+        try
+        {
+            Icon icon = GetOrCreateStatusIcon(statusColor);
+            trayIcon.Icon = icon;
+            trayIcon.Text = tooltip;
+            _currentTrayIcon = icon;
+        }
+        catch
+        {
+            // If icon creation fails, use the default
+        }
+    }
+
+    private Icon GetOrCreateStatusIcon(Color color)
+    {
+        // Check if we already have this color cached
+        if (_statusIconCache.TryGetValue(color, out var cachedIcon))
+        {
+            return cachedIcon;
+        }
+
+        // Create new icon
+        Icon newIcon = CreateColoredIcon(color);
+        _statusIconCache[color] = newIcon;
+        return newIcon;
+    }
+
+    private Icon CreateColoredIcon(Color color)
+    {
+        // Create a 16x16 bitmap with the status color
+        Bitmap bitmap = new Bitmap(16, 16, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using (Graphics g = Graphics.FromImage(bitmap))
+        {
+            g.Clear(Color.Transparent);
+            
+            // Draw a filled circle with the status color
+            using (Brush brush = new SolidBrush(color))
+            {
+                g.FillEllipse(brush, 2, 2, 12, 12);
+            }
+            
+            // Draw a border for better visibility
+            using (Pen pen = new Pen(Color.FromArgb(100, 100, 100), 1))
+            {
+                g.DrawEllipse(pen, 2, 2, 12, 12);
+            }
+        }
+
+        // Convert bitmap to icon
+        IntPtr hIcon = bitmap.GetHicon();
+        Icon icon = Icon.FromHandle(hIcon);
+        
+        // Don't dispose bitmap yet - the icon needs it
+        // The bitmap will be disposed when the icon is disposed
+        bitmap.Dispose();
+        
+        return icon;
     }
 
     private void UpdateStatus(string text, Color color)
@@ -172,7 +262,6 @@ public partial class MainForm : Form
 
         lblStatusValue.Text = text;
         lblStatusValue.ForeColor = color;
-        trayIcon.Text = $"Claude Audio Cue — {text}";
     }
 
     // -- Event handlers --
@@ -259,6 +348,13 @@ public partial class MainForm : Form
         // Always close and exit the application
         _monitor?.Dispose();
         trayIcon.Visible = false;
+        
+        // Clean up cached icons
+        foreach (var icon in _statusIconCache.Values)
+        {
+            icon?.Dispose();
+        }
+        _statusIconCache.Clear();
     }
 
     private void MainForm_Resize(object? sender, EventArgs e)

@@ -20,8 +20,11 @@ public class ClaudeMonitor : IDisposable
     private readonly int _volumePercent;
     private readonly int _cooldownSeconds;
     private DateTime _lastAudioTime = DateTime.MinValue;
+    private DateTime _streamingStartTime = DateTime.MinValue;
+    private TimeSpan _lastResponseDuration = TimeSpan.Zero;
 
     public bool IsRunning => _running;
+    public TimeSpan LastResponseDuration => _lastResponseDuration;
 
     public ClaudeMonitor(IProgress<MonitorStatus> progress, AudioPlayer audioPlayer, int pollIntervalMs = 500, int volumePercent = 100, int cooldownSeconds = 3)
     {
@@ -87,11 +90,13 @@ public class ClaudeMonitor : IDisposable
                 if (isStreaming && !wasStreaming)
                 {
                     // Streaming just started
+                    _streamingStartTime = DateTime.UtcNow;
                     _progress.Report(MonitorStatus.StreamingDetected);
                 }
                 else if (!isStreaming && wasStreaming)
                 {
-                    // Streaming just ended — check cooldown before playing audio
+                    // Streaming just ended — calculate response duration
+                    _lastResponseDuration = DateTime.UtcNow.Subtract(_streamingStartTime);
                     _progress.Report(MonitorStatus.StreamingEnded);
 
                     // Only play audio if cooldown period has elapsed
