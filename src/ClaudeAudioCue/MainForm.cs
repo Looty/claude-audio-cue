@@ -39,7 +39,7 @@ public partial class MainForm : Form
         public static Color StatusIdle = Color.FromArgb(153, 153, 153);
         public static Color StatusSearching = Color.FromArgb(212, 176, 64);
         public static Color StatusMonitoring = Color.FromArgb(16, 124, 16);
-        public static Color StatusStreaming = Color.FromArgb(16, 110, 190);
+        public static Color StatusStreaming = Color.FromArgb(220, 110, 30);
         public static Color StatusError = Color.FromArgb(209, 52, 56);
     }
 
