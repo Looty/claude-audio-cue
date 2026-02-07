@@ -1,129 +1,118 @@
 # claude-audio-cue
 
-Plays an audio cue (beep) when Claude Desktop finishes streaming a response.
-
-**Now uses Windows UI Automation API** - works without requiring special debugging flags!
+A lightweight Windows system tray application that monitors Claude Desktop and plays an audio notification when Claude finishes generating a response.
 
 ## Features
 
-- ✅ **No special flags needed** - works with Claude Desktop out of the box
-- ✅ **Windows UI Automation** - monitors Claude using accessibility APIs
+- ✅ **Works out of the box** - no special flags or configuration needed
+- ✅ **Windows UI Automation** - monitors Claude using accessibility APIs (FlaUI.UIA3)
 - ✅ **Automatic detection** - detects when Claude finishes generating responses
-- ✅ **Audio notification** - plays a beep sound when response is complete
-- ✅ **Lightweight** - minimal CPU and memory usage
+- ✅ **Audio notification** - plays a selected sound when response is complete
+- ✅ **System tray integration** - minimize to tray and control from there
+- ✅ **Lightweight** - minimal CPU and memory usage (~10-20 MB)
+- ✅ **Sound selection** - choose from Windows system sounds or add custom .wav files
+- ✅ **Volume control** - adjust notification volume (0-200%)
+- ✅ **Cooldown timer** - prevents spam when Claude sends multiple short responses
+- ✅ **Theme support** - light and dark mode matching Windows preferences
+- ✅ **Auto-start with Windows** - optional startup with Windows
+- ✅ **Response duration tracking** - displays how long Claude took to respond
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
-- [Claude Desktop](https://claude.ai/download)
+- **Windows 10 or later**
+- **[Claude Desktop](https://claude.ai/download)** (any recent version)
+- **.NET 8 Runtime** (included in published .exe)
 
-## Setup
+## Installation
 
-1. Install dependencies:
+1. Download the latest release from [GitHub Releases](https://github.com/Looty/claude-audio-cue/releases)
+2. Extract `ClaudeAudioCue.exe` to any location
+3. Run `ClaudeAudioCue.exe`
+4. (Optional) Enable "Start with Windows" in the Settings
+
+That's it! The application will automatically find Claude Desktop and start monitoring.
+
+## Building from Source
+
+### Prerequisites
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- Windows 10 or later
+
+### Build Commands
 
 ```bash
-npm install
+# Restore dependencies and build
+dotnet build src/ClaudeAudioCue/ClaudeAudioCue.csproj
+
+# Run in debug mode
+dotnet run --project src/ClaudeAudioCue/ClaudeAudioCue.csproj
+
+# Publish as single-file executable
+dotnet publish src/ClaudeAudioCue/ClaudeAudioCue.csproj -c Release -r win-x64 --self-contained
 ```
 
-2. Run the monitor:
-
-```bash
-# Option A: use the startup script (launches Claude + monitor)
-start-claude-uia.bat
-
-# Option B: if Claude is already running
-npm start
-```
-
-That's it! The monitor will automatically find Claude Desktop and start monitoring for activity.
+The compiled executable will be in `src/ClaudeAudioCue/bin/Release/net8.0-windows/win-x64/publish/`
 
 ## How It Works
 
-1. Uses Windows UI Automation API to find the Claude Desktop window
-2. Monitors UI element changes, text updates, and accessibility events
-3. Detects when Claude is actively generating responses
-4. Waits for activity to stop (2 second timeout)
-5. Plays an ASCII bell beep when the response is complete
+1. **Monitors Claude Desktop** using Windows UI Automation API (FlaUI.UIA3)
+2. **Detects streaming** by checking for stop/pause/cancel buttons in the UI (indicates Claude is generating)
+3. **Polls every 500ms** to check for state changes (proven reliable with Electron apps)
+4. **Plays audio** when streaming ends and cooldown period has elapsed
+5. **Tracks response duration** and updates status in the UI
 
 ## Configuration
 
-You can adjust these settings in `monitor-uia.js`:
+Settings are stored in `%LOCALAPPDATA%\ClaudeAudioCue\settings.json`:
 
-| Setting | Default | Description |
-| ------- | ------- | ----------- |
-| `POLL_INTERVAL_MS` | 500 | How often to check for UI changes (milliseconds) |
-| `ACTIVITY_TIMEOUT_MS` | 2000 | How long to wait after last activity before beeping (milliseconds) |
+### GUI Settings
+- **Sound** - select a .wav file from Windows Media or custom sounds folder
+- **Volume** - adjust notification volume (0-200%)
+- **Poll Interval** - how often to check for streaming (ms, default 500)
+- **Cooldown** - minimum seconds between notifications (default 3)
+- **Theme** - light or dark mode
+- **Start with Windows** - auto-launch on startup
 
-## Customising the Sound
+### Custom Sounds
 
-Replace the `beep()` function in `monitor-uia.js` with any sound playback method you prefer:
+Add custom .wav files to: `%LOCALAPPDATA%\ClaudeAudioCue\Sounds\`
 
-```javascript
-function beep() {
-  // Example: Play a WAV file using PowerShell
-  const { execSync } = require('child_process');
-  execSync('powershell -c (New-Object Media.SoundPlayer "C:\\Windows\\Media\\chimes.wav").PlaySync()');
-  console.log('[claude-audio-cue] 🔔 Response complete!');
-}
-```
+The application will automatically detect and list them in the sound selector.
 
 ## Troubleshooting
 
 ### Claude Window Not Found
 
-If the monitor can't find the Claude Desktop window:
+If the application shows "Searching..." status:
 
-1. **Make sure Claude Desktop is running:**
-   - Open Task Manager and look for `claude.exe`
-   - The window must be open (not just in system tray)
+1. **Ensure Claude Desktop is running** and visible (not minimized to tray)
+2. **Check the Claude window title:**
+   - The application searches for windows containing "Claude" in the title
+   - Most versions show "Claude" or "Anthropic Claude" in the title bar
 
-2. **Check the window title:**
-   - The script looks for windows with "Claude" in the title
-   - If Claude uses a different window title, you may need to adjust `Find-ClaudeWindow` in `monitor-claude-uia.ps1`
+3. **Restart the application** after opening Claude
 
-3. **Run Claude first, then the monitor:**
-   ```bash
-   # Start Claude Desktop manually, then run:
-   npm start
-   ```
+### Not Detecting Streaming
 
-### PowerShell Execution Policy Error
+If the status shows "Monitoring" but doesn't detect when Claude is generating:
 
-If you see "execution of scripts is disabled", run this in PowerShell as Administrator:
+1. **Increase the poll interval** slightly (try 750ms instead of 500ms) in settings
+2. **Verify Claude is actually streaming** - the status should change to "Streaming" when Claude is responding
+3. **Check Claude Desktop version** - if UI changed significantly, detection might need updates
 
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+To debug, check `%LOCALAPPDATA%\ClaudeAudioCue\` for any logs or diagnostic information.
 
-### Monitor Not Detecting Activity
+### Multiple Notifications
 
-If the monitor runs but doesn't detect when Claude is responding:
+If you're getting multiple quick notifications:
 
-1. **Adjust the timeout:**
-   - Edit `ACTIVITY_TIMEOUT_MS` in `monitor-uia.js`
-   - Increase it if beeps happen too early
-   - Decrease it if beeps happen too late
+1. **Increase the cooldown timer** in settings (try 5-10 seconds)
+2. **Restart the application** to ensure settings are loaded
 
-2. **Check PowerShell output:**
-   - Look for `[ACTIVITY]` messages in the console
-   - If you see these, the detection is working
-   - If not, Claude's UI might not trigger the expected events
+### Running Multiple Instances
 
-3. **Try the event-based monitor:**
-   - Edit `monitor-uia.js` and change the PowerShell script to `monitor-claude-uia-events.ps1`
-   - This uses a different detection method
+The application prevents multiple instances from running:
 
-### False Positives
-
-If you get beeps when Claude isn't actually done:
-
-1. **Increase `ACTIVITY_TIMEOUT_MS`** in `monitor-uia.js` (try 3000-5000ms)
-2. **Adjust `POLL_INTERVAL_MS`** to check less frequently (try 1000ms)
-
-## Legacy CDP Method
-
-The original Chrome DevTools Protocol method is still available in `beep-on-claude-done.js`, but Claude Desktop doesn't support the required `--remote-debugging-port` flag. If you're using a different Electron app that supports this flag:
-
-```bash
-npm run monitor-cdp
-```
+- Close the existing instance (check system tray)
+- Use "Exit" from the tray menu to properly shut down
+- Windows/System Tray right-click → close if needed
