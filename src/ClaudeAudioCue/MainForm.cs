@@ -7,7 +7,7 @@ public partial class MainForm : Form
     private ClaudeMonitor? _monitor;
     private bool _isExiting;
     private bool _hasBeenShown;
-    
+
     // Cache for status icons
     private readonly Dictionary<Color, Icon> _statusIconCache = new();
     private Icon? _currentTrayIcon;
@@ -227,13 +227,13 @@ public partial class MainForm : Form
         using (Graphics g = Graphics.FromImage(bitmap))
         {
             g.Clear(Color.Transparent);
-            
+
             // Draw a filled circle with the status color
             using (Brush brush = new SolidBrush(color))
             {
                 g.FillEllipse(brush, 2, 2, 12, 12);
             }
-            
+
             // Draw a border for better visibility
             using (Pen pen = new Pen(Color.FromArgb(100, 100, 100), 1))
             {
@@ -244,11 +244,11 @@ public partial class MainForm : Form
         // Convert bitmap to icon
         IntPtr hIcon = bitmap.GetHicon();
         Icon icon = Icon.FromHandle(hIcon);
-        
+
         // Don't dispose bitmap yet - the icon needs it
         // The bitmap will be disposed when the icon is disposed
         bitmap.Dispose();
-        
+
         return icon;
     }
 
@@ -348,7 +348,7 @@ public partial class MainForm : Form
         // Always close and exit the application
         _monitor?.Dispose();
         trayIcon.Visible = false;
-        
+
         // Clean up cached icons
         foreach (var icon in _statusIconCache.Values)
         {
