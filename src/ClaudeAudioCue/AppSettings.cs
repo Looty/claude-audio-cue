@@ -25,6 +25,8 @@ public class AppSettings
     public int PollIntervalMs { get; set; } = 500;
     public int VolumePercent { get; set; } = 70; // 30% reduction from default
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
+    public int CooldownSeconds { get; set; } = 3; // Minimum seconds between audio cues
+    public bool StartWithWindows { get; set; } = false;
     public WindowPosition? MainWindowPosition { get; set; }
 
     private static string GetSettingsPath()

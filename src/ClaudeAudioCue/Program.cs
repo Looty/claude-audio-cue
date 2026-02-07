@@ -4,8 +4,13 @@ static class Program
 {
     private static Mutex? _mutex;
 
+    /// <summary>
+    /// When true, the app starts minimized to the system tray (used for auto-start with Windows).
+    /// </summary>
+    public static bool StartMinimized { get; private set; }
+
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
         _mutex = new Mutex(true, "ClaudeAudioCue_SingleInstance", out bool createdNew);
         if (!createdNew)
@@ -17,6 +22,8 @@ static class Program
                 MessageBoxIcon.Information);
             return;
         }
+
+        StartMinimized = args.Contains("--minimized", StringComparer.OrdinalIgnoreCase);
 
         ApplicationConfiguration.Initialize();
         Application.Run(new MainForm());

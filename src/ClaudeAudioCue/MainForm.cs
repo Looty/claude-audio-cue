@@ -6,6 +6,7 @@ public partial class MainForm : Form
     private readonly AudioPlayer _audioPlayer;
     private ClaudeMonitor? _monitor;
     private bool _isExiting;
+    private bool _hasBeenShown;
 
     // Color scheme for light/dark themes
     private static class Colors
@@ -53,6 +54,24 @@ public partial class MainForm : Form
 
         // Auto-start monitoring
         StartMonitoring();
+
+        // If launched with --minimized (e.g. auto-start with Windows), go straight to tray
+        if (Program.StartMinimized)
+        {
+            trayIcon.Visible = true;
+        }
+    }
+
+    protected override void SetVisibleCore(bool value)
+    {
+        // On first show, if --minimized was passed, start hidden in the tray
+        if (Program.StartMinimized && !_hasBeenShown)
+        {
+            _hasBeenShown = true;
+            base.SetVisibleCore(false);
+            return;
+        }
+        base.SetVisibleCore(value);
     }
 
     private void SetupSoundList()
@@ -101,7 +120,7 @@ public partial class MainForm : Form
             return;
 
         var progress = new Progress<MonitorStatus>(OnStatusChanged);
-        _monitor = new ClaudeMonitor(progress, _audioPlayer, _settings.PollIntervalMs, _settings.VolumePercent);
+        _monitor = new ClaudeMonitor(progress, _audioPlayer, _settings.PollIntervalMs, _settings.VolumePercent, _settings.CooldownSeconds);
         _monitor.Start();
 
         btnToggle.Text = "Stop Monitoring";

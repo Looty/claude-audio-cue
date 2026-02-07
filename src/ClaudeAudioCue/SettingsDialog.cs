@@ -69,6 +69,10 @@ public partial class SettingsDialog : Form
         radThemeLight.ForeColor = textColor;
         radThemeDark.ForeColor = textColor;
 
+        // Startup section
+        lblStartup.ForeColor = secColor;
+        chkStartWithWindows.ForeColor = textColor;
+
         // Primary button (OK - Accent)
         btnOK.BackColor = accentColor;
         btnOK.ForeColor = Color.White;
@@ -94,11 +98,18 @@ public partial class SettingsDialog : Form
         trkPollInterval.Value = _settings.PollIntervalMs;
         lblPollIntervalValue.Text = $"{_settings.PollIntervalMs} ms";
 
+        // Load cooldown
+        trkCooldown.Value = _settings.CooldownSeconds;
+        lblCooldownValue.Text = $"{_settings.CooldownSeconds} sec";
+
         // Load theme
         if (_settings.ThemeMode == ThemeMode.Dark)
             radThemeDark.Checked = true;
         else
             radThemeLight.Checked = true;
+
+        // Load startup — read actual registry state as source of truth
+        chkStartWithWindows.Checked = StartupManager.IsEnabled();
     }
 
     private void SetupEventHandlers()
@@ -113,21 +124,26 @@ public partial class SettingsDialog : Form
             lblPollIntervalValue.Text = $"{trkPollInterval.Value} ms";
         };
 
+        trkCooldown.Scroll += (_, _) =>
+        {
+            lblCooldownValue.Text = $"{trkCooldown.Value} sec";
+        };
+
         btnTestSound.Click += (_, _) =>
         {
             // Debug: Check the file path and file existence
             string? filePath = _audioPlayer.SoundFilePath;
-            
+
             if (string.IsNullOrEmpty(filePath))
             {
-                MessageBox.Show("No sound selected. Please select a sound in the main window first.", 
+                MessageBox.Show("No sound selected. Please select a sound in the main window first.",
                     "No Sound Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             if (!File.Exists(filePath))
             {
-                MessageBox.Show($"Audio file not found:\n{filePath}\n\nMake sure the file exists in C:\\Windows\\Media", 
+                MessageBox.Show($"Audio file not found:\n{filePath}\n\nMake sure the file exists in C:\\Windows\\Media",
                     "File Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -144,8 +160,13 @@ public partial class SettingsDialog : Form
         // Save settings
         _settings.VolumePercent = trkVolume.Value;
         _settings.PollIntervalMs = trkPollInterval.Value;
+        _settings.CooldownSeconds = trkCooldown.Value;
         _settings.ThemeMode = radThemeDark.Checked ? ThemeMode.Dark : ThemeMode.Light;
+        _settings.StartWithWindows = chkStartWithWindows.Checked;
         _settings.Save();
+
+        // Update the Windows startup registry entry
+        StartupManager.SetEnabled(chkStartWithWindows.Checked);
 
         this.DialogResult = DialogResult.OK;
         this.Close();

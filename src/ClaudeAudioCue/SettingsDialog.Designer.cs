@@ -16,9 +16,16 @@ partial class SettingsDialog
     private TrackBar trkPollInterval = null!;
     private Label lblPollIntervalValue = null!;
 
+    private Label lblCooldown = null!;
+    private TrackBar trkCooldown = null!;
+    private Label lblCooldownValue = null!;
+
     private Label lblTheme = null!;
     private RadioButton radThemeLight = null!;
     private RadioButton radThemeDark = null!;
+
+    private Label lblStartup = null!;
+    private CheckBox chkStartWithWindows = null!;
 
     private Button btnOK = null!;
     private Button btnCancel = null!;
@@ -38,7 +45,7 @@ partial class SettingsDialog
 
         // Form settings (colors will be applied by ApplyTheme)
         this.Text = "Settings";
-        this.Size = new Size(500, 420);
+        this.Size = new Size(500, 540);
         this.StartPosition = FormStartPosition.CenterParent;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.MaximizeBox = false;
@@ -121,19 +128,46 @@ partial class SettingsDialog
             AutoSize = true
         };
 
+        // ===== COOLDOWN SECTION =====
+        lblCooldown = new Label
+        {
+            Text = "Minimum Cooldown Between Cues",
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            Location = new Point(16, 220),
+            AutoSize = true
+        };
+
+        trkCooldown = new TrackBar
+        {
+            Location = new Point(16, 245),
+            Size = new Size(250, 45),
+            Minimum = 1,
+            Maximum = 30,
+            Value = 3,
+            TickFrequency = 1
+        };
+
+        lblCooldownValue = new Label
+        {
+            Text = "3 sec",
+            Font = new Font("Segoe UI", 9F),
+            Location = new Point(280, 250),
+            AutoSize = true
+        };
+
         // ===== THEME SECTION =====
         lblTheme = new Label
         {
             Text = "Theme",
             Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-            Location = new Point(16, 220),
+            Location = new Point(16, 310),
             AutoSize = true
         };
 
         radThemeLight = new RadioButton
         {
             Text = "Light",
-            Location = new Point(16, 245),
+            Location = new Point(16, 335),
             AutoSize = true,
             Font = new Font("Segoe UI", 9F),
             Checked = true
@@ -142,16 +176,33 @@ partial class SettingsDialog
         radThemeDark = new RadioButton
         {
             Text = "Dark",
-            Location = new Point(100, 245),
+            Location = new Point(100, 335),
             AutoSize = true,
             Font = new Font("Segoe UI", 9F)
+        };
+
+        // ===== STARTUP SECTION =====
+        lblStartup = new Label
+        {
+            Text = "Startup",
+            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+            Location = new Point(16, 375),
+            AutoSize = true
+        };
+
+        chkStartWithWindows = new CheckBox
+        {
+            Text = "Start with Windows (minimized to tray)",
+            Font = new Font("Segoe UI", 9F),
+            Location = new Point(16, 400),
+            AutoSize = true
         };
 
         // ===== BUTTONS =====
         btnOK = new Button
         {
             Text = "OK",
-            Location = new Point(250, 310),
+            Location = new Point(250, 450),
             Size = new Size(80, 32),
             Font = new Font("Segoe UI", 9F),
             FlatStyle = FlatStyle.Flat,
@@ -164,7 +215,7 @@ partial class SettingsDialog
         btnCancel = new Button
         {
             Text = "Cancel",
-            Location = new Point(340, 310),
+            Location = new Point(340, 450),
             Size = new Size(80, 32),
             Font = new Font("Segoe UI", 9F),
             FlatStyle = FlatStyle.Flat,
@@ -184,9 +235,14 @@ partial class SettingsDialog
             lblPollInterval,
             trkPollInterval,
             lblPollIntervalValue,
+            lblCooldown,
+            trkCooldown,
+            lblCooldownValue,
             lblTheme,
             radThemeLight,
             radThemeDark,
+            lblStartup,
+            chkStartWithWindows,
             btnOK,
             btnCancel
         });
