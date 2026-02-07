@@ -19,4 +19,4 @@ publish/
 Thumbs.db
 
 # Local settings
-.claude/settings.local.json
+.claude/*

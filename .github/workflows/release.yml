@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore ClaudeAudioCue.sln
+
+      - name: Build
+        run: dotnet build ClaudeAudioCue.sln --configuration Release --no-restore /property:GenerateFullPaths=true
+
+      - name: Publish
+        run: dotnet publish ClaudeAudioCue.sln --configuration Release --no-build --self-contained /property:GenerateFullPaths=true
+
+      - name: Prepare artifacts
+        shell: pwsh
+        run: |
+          $publishPath = "src\ClaudeAudioCue\bin\Release\net8.0-windows\win-x64\publish"
+          $exePath = "$publishPath\ClaudeAudioCue.exe"
+          $zipPath = "ClaudeAudioCue-windows.zip"
+
+          # Create zip archive with the executable and dependencies
+          Compress-Archive -Path "$publishPath\*" -DestinationPath "$zipPath" -Force
+
+          # Also copy just the exe for easy download
+          Copy-Item $exePath -Destination "ClaudeAudioCue.exe"
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Date -Format "yyyy.M.d.Hmm")
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: Release ${{ steps.version.outputs.version }}
+          tag_name: v${{ steps.version.outputs.version }}
+          body_path: CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload Release Asset - Executable
+        if: steps.create_release.outcome == 'success'
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./ClaudeAudioCue.exe
+          asset_name: ClaudeAudioCue.exe
+          asset_content_type: application/octet-stream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset - ZIP
+        if: steps.create_release.outcome == 'success'
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./ClaudeAudioCue-windows.zip
+          asset_name: ClaudeAudioCue-windows.zip
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
