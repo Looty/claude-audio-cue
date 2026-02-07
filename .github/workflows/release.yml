@@ -99,13 +99,13 @@ jobs:
 
           # Find where to insert (after first two lines)
           $lines = $content -split "`n", 3
-          
+
           if ($body) {
             $changelogEntry = $body
           } else {
             $changelogEntry = "Release version $version"
           }
-          
+
           $newEntry = "## [$version] - $date`n`n$changelogEntry`n"
 
           if ($lines.Length -gt 2) {
@@ -113,7 +113,7 @@ jobs:
           } else {
             $additionalContent = ""
           }
-          
+
           $updatedContent = $lines[0] + "`n" + $lines[1] + "`n`n" + $newEntry + "`n" + $additionalContent
           Set-Content -Path $changelogPath -Value $updatedContent
 
@@ -128,6 +128,7 @@ jobs:
 
       - name: Create and Push Git Tag
         if: success()
+        id: tag_info
         run: |
           $tagName = "${{ steps.version.outputs.tag }}"
           $version = "${{ steps.version.outputs.version }}"
@@ -140,6 +141,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # Get the previous tag for changelog link
+          $previousTag = git describe --tags --abbrev=0 2>$null | Select-Object -First 1
+          if (-not $previousTag) {
+            $previousTag = ""
+            Write-Host "No previous tag found"
+          } else {
+            Write-Host "Previous tag: $previousTag"
+          }
+
           # Check if tag already exists
           $tagExists = git tag -l "$tagName"
 
@@ -150,7 +160,35 @@ jobs:
             git tag -a "$tagName" -m "Release version $version"
             git push origin "$tagName"
           }
+
+          # Set outputs for release creation
+          echo "previous_tag=$previousTag" >> $env:GITHUB_OUTPUT
         shell: pwsh
+
+      - name: Build Release Body
+        id: release_body
+        shell: pwsh
+        run: |
+          $previousTag = "${{ steps.tag_info.outputs.previous_tag }}"
+          $currentTag = "${{ steps.version.outputs.tag }}"
+          $draftBody = "${{ steps.draft_release.outputs.body }}"
+
+          # Replace $RESOLVED_TAG with actual tag
+          $releaseBody = $draftBody -replace '\$RESOLVED_TAG', $currentTag
+          $releaseBody = $releaseBody -replace '\$PREVIOUS_TAG', $previousTag
+
+          # If no previous tag, create a simple changelog
+          if (-not $previousTag) {
+            $releaseBody = "## Changes in this Release`n`n$($releaseBody -replace '.*Full Changelog.*', '')"
+          } else {
+            # Ensure the changelog link is correct
+            $releaseBody = $releaseBody -replace 'compare/[^.]*\.\.\.\$RESOLVED_TAG', "compare/$previousTag...$currentTag"
+          }
+
+          # Output as multiline for GitHub Actions
+          $releaseBody | Out-File -FilePath releaseBody.txt -Encoding UTF8
+          $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($releaseBody))
+          echo "body=$encoded" >> $env:GITHUB_OUTPUT
 
       - name: Create Release
         if: success()
@@ -160,7 +198,7 @@ jobs:
           prerelease: false
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
-          body: ${{ steps.draft_release.outputs.body }}
+          body_path: releaseBody.txt
           files: |
             ./ClaudeAudioCue.exe
             ./ClaudeAudioCue-windows.zip
