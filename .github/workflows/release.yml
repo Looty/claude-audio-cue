@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -44,44 +46,55 @@ jobs:
           # Also copy just the exe for easy download
           Copy-Item $exePath -Destination "ClaudeAudioCue.exe"
 
-      - name: Get version
-        id: version
+      - name: Draft Release Notes
+        uses: release-drafter/release-drafter@v6
+        id: draft_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update CHANGELOG
+        if: success()
         shell: pwsh
         run: |
-          $version = (Get-Date -Format "yyyy.M.d.Hmm")
-          echo "version=$version" >> $env:GITHUB_OUTPUT
+          $version = "${{ steps.draft_release.outputs.version }}"
+          $body = "${{ steps.draft_release.outputs.body }}"
+
+          if (-not $version -or -not $body) {
+            Write-Host "Warning: Draft release outputs missing, skipping CHANGELOG update"
+            exit 0
+          }
+
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $changelogPath = "CHANGELOG.md"
+          $content = Get-Content $changelogPath -Raw
+
+          # Find where to insert (after first two lines)
+          $lines = $content -split "`n", 3
+          $newEntry = "## [$version] - $date`n`n$body`n"
+
+          $updatedContent = $lines[0] + "`n" + $lines[1] + "`n`n" + $newEntry + "`n" + (if ($lines.Length -gt 2) { $lines[2] } else { "" })
+          Set-Content -Path $changelogPath -Value $updatedContent
+
+      - name: Commit CHANGELOG
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore: update CHANGELOG for ${{ steps.draft_release.outputs.version }}" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref }} || echo "Push failed or no remote"
 
       - name: Create Release
-        uses: actions/create-release@v1
-        id: create_release
+        if: success()
+        uses: softprops/action-gh-release@v2
         with:
           draft: false
-          prerelease: false
-          release_name: Release ${{ steps.version.outputs.version }}
-          tag_name: v${{ steps.version.outputs.version }}
-          body_path: CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-
-      - name: Upload Release Asset - Executable
-        if: steps.create_release.outcome == 'success'
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ClaudeAudioCue.exe
-          asset_name: ClaudeAudioCue.exe
-          asset_content_type: application/octet-stream
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Asset - ZIP
-        if: steps.create_release.outcome == 'success'
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ClaudeAudioCue-windows.zip
-          asset_name: ClaudeAudioCue-windows.zip
-          asset_content_type: application/zip
+          prerelease: ${{ contains(steps.draft_release.outputs.version, 'alpha') || contains(steps.draft_release.outputs.version, 'beta') }}
+          tag_name: ${{ steps.draft_release.outputs.tag_name }}
+          name: ${{ steps.draft_release.outputs.name }}
+          body: ${{ steps.draft_release.outputs.body }}
+          files: |
+            ./ClaudeAudioCue.exe
+            ./ClaudeAudioCue-windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
